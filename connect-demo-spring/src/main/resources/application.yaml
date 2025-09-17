@@ -1,0 +1,10 @@
+server:
+  port: 4243
+
+# Fill these in application.yaml or via environment variables.
+# The app will fail fast with clear messages if not provided.
+stripe:
+  secretKey: "to_complete"   # sk_test_... or sk_live_...
+  publishableKey: "to_complete"                 # Required for /pay page (Stripe.js)
+  apiVersion: "2025-08-27.basil"
+  rootUrl: "http://localhost:4243"            # Public root URL for redirects
