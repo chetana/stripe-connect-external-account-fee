@@ -39,7 +39,8 @@
   </div>
 
   <div id="payment-element"></div>
-  <button id="create">Créer PaymentIntent</button>
+  <button id="create">Créer PaymentIntent (Connect)</button>
+  <button id="create-platform">Créer PaymentIntent (Plateforme)</button>
   <button id="pay" style="display: none;">Confirmer le paiement</button>
 
   <h3>Console</h3>
@@ -62,9 +63,10 @@
 
     let stripe, elements, paymentElement;
 
+    // Destination charge (Connect)
     document.getElementById('create').onclick = async () => {
       try {
-        log('Creating PaymentIntent...');
+        log('Creating PaymentIntent (Connect)...');
         if (!PUBLISHABLE_KEY || PUBLISHABLE_KEY.includes('_PUT_')) {
           throw new Error('Missing publishable key in config (stripe.publishableKey)');
         }
@@ -89,10 +91,44 @@
         paymentElement = elements.create('payment');
         paymentElement.mount('#payment-element');
 
-        // Show pay button and hide create button
-        document.getElementById('create').style.display = 'none';
+        // Show pay button
         document.getElementById('pay').style.display = 'inline-block';
         
+        log('Veuillez remplir les informations de paiement et cliquer sur "Confirmer le paiement"');
+      } catch (e) {
+        log(['Error', e.message || e.toString()]);
+        alert(e.message || e.toString());
+      }
+    };
+
+    // Platform charge (plateforme)
+    document.getElementById('create-platform').onclick = async () => {
+      try {
+        log('Creating PaymentIntent (Plateforme)...');
+        if (!PUBLISHABLE_KEY || PUBLISHABLE_KEY.includes('_PUT_')) {
+          throw new Error('Missing publishable key in config (stripe.publishableKey)');
+        }
+        stripe = Stripe(PUBLISHABLE_KEY);
+
+        // Gather inputs (ignore connected account and fee)
+        const amount = parseInt(document.getElementById('amount').value, 10);
+        const currency = document.getElementById('currency').value.trim();
+        const order = document.getElementById('order').value.trim() || null;
+
+        // Create PaymentIntent on server (platform)
+        const pi = await postJSON('/payments/platform', {
+          amount, currency, order_id: order
+        });
+        log(['PaymentIntent (platform) created', pi]);
+
+        // Mount Payment Element
+        elements = stripe.elements({ clientSecret: pi.client_secret });
+        paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+
+        // Show pay button
+        document.getElementById('pay').style.display = 'inline-block';
+
         log('Veuillez remplir les informations de paiement et cliquer sur "Confirmer le paiement"');
       } catch (e) {
         log(['Error', e.message || e.toString()]);

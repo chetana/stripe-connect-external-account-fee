@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Succès</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <style>
+    code { background: #f6f8fa; padding: .2rem .4rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<header class="blue darken-1 white-text">
+  <div class="container">
+    <h1 class="flow-text">Paiement réussi</h1>
+  </div>
+</header>
+<main class="container" style="margin-top: 24px;">
+  <section class="card">
+    <div class="card-content">
+      <span class="card-title">Merci pour votre achat</span>
+      <div id="after-payment" style="display:none;">
+        <p>
+          Frais d'application détectés: <code id="fee"></code> <code id="fee-currency"></code>
+        </p>
+        <a id="btn-transfer" class="waves-effect waves-light btn"><i class="material-icons left">sync_alt</i>Transférer les fees à Djust</a>
+        <span id="transfer-log" class="grey-text text-darken-1" style="margin-left:.5rem; font-family:monospace;"></span>
+      </div>
+      <div class="section">
+        <a class="waves-effect waves-light btn" href="/"><i class="material-icons left">home</i>Accueil</a>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script>
+  // Parse PI id from URL if present (e.g., success?payment_intent=pi_...)
+  const params = new URLSearchParams(window.location.search);
+  const piId = params.get('payment_intent') || params.get('pi');
+
+  async function fetchPI(id) {
+    const res = await fetch(`/payments/${id}`);
+    return await res.json();
+  }
+
+  // Check if a Djust account is configured
+  async function hasDjustAccount() {
+    try {
+      const res = await fetch('/api/state');
+      const j = await res.json();
+      return Boolean(j && j.djust && !j.djust.error);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function init() {
+    if (!piId) return;
+    try {
+      const pi = await fetchPI(piId);
+      if (pi && pi.application_fee_amount && pi.currency) {
+        document.getElementById('fee').textContent = pi.application_fee_amount;
+        document.getElementById('fee-currency').textContent = pi.currency;
+        document.getElementById('after-payment').style.display = 'block';
+
+        const btn = document.getElementById('btn-transfer');
+        const tl = document.getElementById('transfer-log');
+        const djustOk = await hasDjustAccount();
+        if (!djustOk) {
+          btn.disabled = true;
+          btn.title = 'Aucun compte Djust configuré';
+          tl.textContent = 'Configurez le compte Djust sur la page d\'accueil avant de transférer les fees.';
+        } else {
+          btn.onclick = async () => {
+            try {
+              const res = await fetch('/transfers/djust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                amount: pi.application_fee_amount,
+                currency: pi.currency,
+                description: `Reversement des fees du paiement ${pi.id}`
+              })});
+              const j = await res.json();
+              if (j.error) tl.textContent = `Erreur: ${j.error}`; else tl.textContent = `Transfert OK: ${j.id} (${j.amount} ${j.currency})`;
+            } catch (e) {
+              tl.textContent = `Erreur: ${e.message}`;
+            }
+          };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

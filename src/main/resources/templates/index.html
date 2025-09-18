@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stripe Connect Demo (Spring)</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+</head>
+<body>
+<nav class="blue darken-2">
+  <div class="nav-wrapper container">
+    <a href="/" class="brand-logo">Djust Back Office</a>
+    <a href="#" data-target="sidenav" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+    <ul class="right hide-on-med-and-down">
+      <li><a href="#section-accounts">Comptes</a></li>
+      <li><a href="#section-djust">Djust</a></li>
+      <li><a href="#section-transfers">Transfers</a></li>
+      <li><a href="#section-payments">Paiements</a></li>
+    </ul>
+  </div>
+</nav>
+<ul id="sidenav" class="sidenav sidenav-fixed">
+  <li><a class="subheader">Navigation</a></li>
+  <li><a href="#section-accounts"><i class="material-icons">account_tree</i>Comptes connectés</a></li>
+  <li><a href="#section-djust"><i class="material-icons">business</i>Djust</a></li>
+  <li><a href="#section-transfers"><i class="material-icons">sync_alt</i>Transfers</a></li>
+  <li><a href="#section-payments"><i class="material-icons">payment</i>Paiements</a></li>
+</ul>
+<main class="admin-main container">
+  <section class="card">
+    <div class="card-content">
+      <span class="card-title">Gérer les comptes connectés</span>
+      <div class="section">
+        <a id="btn-create-account" class="waves-effect waves-light btn"><i class="material-icons left">add</i>Create connected account</a>
+      </div>
+      <div class="row">
+        <div class="input-field col s12 m8">
+          <input id="existing-account-id" type="text" placeholder="acct_... (compte existant)">
+          <label for="existing-account-id" class="active">Compte existant</label>
+        </div>
+        <div class="input-field col s12 m4" style="margin-top: 20px;">
+          <a id="btn-add-existing" class="waves-effect waves-light btn"><i class="material-icons left">link</i>Ajouter</a>
+        </div>
+      </div>
+      <div id="accounts" class="section" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-content">
+      <span class="card-title">Compte connecté Djust (Express)</span>
+      <div class="row">
+        <div class="input-field col s12 m6">
+          <input id="djust-email" type="email" placeholder="contact@djust.com">
+          <label for="djust-email" class="active">Email (optionnel)</label>
+        </div>
+        <div class="input-field col s12 m6">
+          <input id="djust-country" type="text" placeholder="FR">
+          <label for="djust-country" class="active">Pays (optionnel)</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s12">
+          <a id="btn-create-djust" class="waves-effect waves-light btn"><i class="material-icons left">person_add</i>Créer/associer</a>
+          <a id="btn-onboard-djust" class="waves-effect waves-light btn"><i class="material-icons left">launch</i>Onboard</a>
+          <span id="djust-id" class="grey-text text-darken-1" style="margin-left:8px; font-family:monospace;"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="input-field col s12 m8">
+          <input id="djust-existing-id" type="text" placeholder="acct_... (Djust existant)">
+          <label for="djust-existing-id" class="active">Associer un Djust existant</label>
+        </div>
+        <div class="input-field col s12 m4" style="margin-top: 20px;">
+          <a id="btn-link-existing-djust" class="waves-effect waves-light btn"><i class="material-icons left">link</i>Lier</a>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s12">
+          <a id="btn-request-transfers" class="waves-effect waves-light btn"><i class="material-icons left">sync_alt</i>Demander transfers</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-content">
+      <span class="card-title">Transférer des fees à Djust</span>
+      <div class="row">
+        <div class="col s12">
+          <small id="balance-box" class="grey-text text-darken-1">Solde plateforme: chargement...</small>
+          <br />
+          <small id="balance-box-pending" class="grey-text text-darken-1">Solde en attente: chargement...</small>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col s12">
+          <a id="btn-refresh-balance" class="btn waves-effect waves-light"><i class="material-icons left">refresh</i>Rafraîchir le solde</a>
+        </div>
+      </div>
+      <form id="transfer-form">
+        <div class="row">
+          <div class="input-field col s12 m6">
+            <input name="amount" id="transfer-amount" type="number" min="1" placeholder="200" required>
+            <label for="transfer-amount" class="active">Montant (cents)</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <input name="currency" id="transfer-currency" type="text" value="eur" required>
+            <label for="transfer-currency" class="active">Devise</label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="input-field col s12">
+            <input name="description" id="transfer-description" type="text" placeholder="Reversement des fees Djust">
+            <label for="transfer-description" class="active">Description (optionnel)</label>
+          </div>
+        </div>
+        <button class="btn waves-effect waves-light" type="submit">Transférer à Djust</button>
+        <span id="transfer-log" class="grey-text text-darken-1" style="margin-left:.5rem; font-family:monospace;"></span>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-content">
+      <span class="card-title">Créer un paiement (Payment Intent)</span>
+      <form id="pi-form">
+        <div class="row">
+          <div class="input-field col s12 m6">
+            <input name="amount" id="pi-amount" type="number" min="1" placeholder="2000" required>
+            <label for="pi-amount" class="active">Montant (cents)</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <input name="currency" id="pi-currency" type="text" value="eur" required>
+            <label for="pi-currency" class="active">Devise</label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="input-field col s12">
+            <input name="connected_account_id" id="pi-connected" type="text" placeholder="acct_..." required>
+            <label for="pi-connected" class="active">Compte connecté</label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="input-field col s12 m6">
+            <input name="application_fee_amount" id="pi-fee" type="number" min="0" placeholder="200">
+            <label for="pi-fee" class="active">Frais d'application (cents, optionnel)</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <input name="order_id" id="pi-order" type="text" placeholder="ORD-123">
+            <label for="pi-order" class="active">Order ID (optionnel)</label>
+          </div>
+        </div>
+        <button class="btn waves-effect waves-light" type="submit">Aller au paiement</button>
+      </form>
+    </div>
+  </section>
+</main>
+<style>
+  /* Back-office layout tweaks */
+  .sidenav { width: 260px; }
+  .admin-main { margin-left: 280px; margin-top: 24px; }
+  @media (max-width: 992px) {
+    .admin-main { margin-left: 0; }
+  }
+  .card .card-title { font-weight: 600; }
+  #accounts code { background: #f6f8fa; padding: .2rem .4rem; border-radius: 4px; }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var elems = document.querySelectorAll('.sidenav');
+    M.Sidenav.init(elems);
+  });
+</script>
+<script th:inline="javascript">
+  const DJUST_ID = /*[[${djustAccountId}]]*/ '';
+  async function refreshState() {
+    const res = await fetch('/api/state');
+    const data = await res.json();
+
+    const list = document.getElementById('accounts');
+    list.innerHTML = '';
+
+    data.accounts.forEach(a => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-content">
+          <span class="card-title" style="font-size:1rem; word-break:break-all;"><code>${a.id}</code></span>
+          <p class="grey-text text-darken-1">Charges: <strong>${a.charges_enabled ? 'enabled' : 'disabled'}</strong> · Payouts: <strong>${a.payouts_enabled ? 'enabled' : 'disabled'}</strong></p>
+        </div>
+        <div class="card-action">
+          <a data-id="${a.id}" class="btn-small waves-effect waves-light btn-onboard"><i class="material-icons left">launch</i>Onboard</a>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+    document.querySelectorAll('.btn-onboard').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const r = await fetch(`/accounts/${id}/onboard`, { method: 'POST' });
+        const j = await r.json();
+        if (j.url) window.location = j.url; else alert(j.error || 'Failed to create account link');
+      };
+    });
+
+    const djustSpan = document.getElementById('djust-id');
+    if (data.djust && data.djust.id) {
+      djustSpan.textContent = data.djust.id + ` (charges: ${data.djust.charges_enabled ? 'on' : 'off'})`;
+    } else if (DJUST_ID) {
+      djustSpan.textContent = DJUST_ID;
+    }
+
+    // Update platform balance box
+    const balBox = document.getElementById('balance-box');
+    if (data.platform_balance) {
+      const parts = Object.entries(data.platform_balance).map(([cur, amt]) => `${cur.toUpperCase()}: ${amt}`).join(' · ');
+      balBox.textContent = `Solde plateforme (disponible): ${parts}`;
+    } else {
+      balBox.textContent = 'Solde plateforme: indisponible';
+    }
+    const balPending = document.getElementById('balance-box-pending');
+    if (data.platform_balance_pending) {
+      const partsPending = Object.entries(data.platform_balance_pending).map(([cur, amt]) => `${cur.toUpperCase()}: ${amt}`).join(' · ');
+      balPending.textContent = `Solde en attente: ${partsPending}`;
+    } else {
+      balPending.textContent = 'Solde en attente: indisponible';
+    }
+  }
+
+  document.getElementById('btn-create-account').onclick = async () => {
+    const r = await fetch('/accounts', { method: 'POST' });
+    const j = await r.json();
+    if (j.error) alert(j.error);
+    await refreshState();
+  };
+
+  document.getElementById('btn-add-existing').onclick = async () => {
+    const accountId = document.getElementById('existing-account-id').value.trim();
+    if (!accountId) {
+      alert('Veuillez saisir un ID de compte (acct_...)');
+      return;
+    }
+    if (!accountId.startsWith('acct_')) {
+      alert('L\'ID du compte doit commencer par "acct_"');
+      return;
+    }
+    
+    try {
+      const r = await fetch(`/accounts/${accountId}/verify`, { method: 'POST' });
+      const j = await r.json();
+      if (j.error) {
+        alert(`Erreur: ${j.error}`);
+      } else {
+        alert(`Compte ajouté avec succès: ${accountId}`);
+        document.getElementById('existing-account-id').value = '';
+        await refreshState();
+      }
+    } catch (e) {
+      alert(`Erreur lors de la vérification du compte: ${e.message}`);
+    }
+  };
+
+  document.getElementById('pi-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const p = Object.fromEntries(new FormData(form).entries());
+    // Redirige vers /pay avec les paramètres saisis
+    const qs = new URLSearchParams(p).toString();
+    window.location = `/pay?${qs}`;
+  };
+
+  document.getElementById('btn-create-djust').onclick = async () => {
+    const email = document.getElementById('djust-email').value.trim();
+    const country = document.getElementById('djust-country').value.trim();
+    const params = new URLSearchParams();
+    if (email) params.append('email', email);
+    if (country) params.append('country', country);
+    const r = await fetch(`/accounts/djust?${params.toString()}`, { method: 'POST' });
+    const j = await r.json();
+    if (j.error) alert(j.error); else {
+      document.getElementById('djust-id').textContent = j.id;
+    }
+  };
+
+  document.getElementById('btn-onboard-djust').onclick = async () => {
+    const r = await fetch('/accounts/djust/onboard', { method: 'POST' });
+    const j = await r.json();
+    if (j.url) window.location = j.url; else alert(j.error || 'Failed to create account link');
+  };
+
+  document.getElementById('btn-link-existing-djust').onclick = async () => {
+    const id = document.getElementById('djust-existing-id').value.trim();
+    if (!id) { alert('Veuillez saisir un ID de compte (acct_...)'); return; }
+    if (!id.startsWith('acct_')) { alert('L\'ID du compte doit commencer par "acct_"'); return; }
+    try {
+      const r = await fetch(`/accounts/djust/verify?id=${encodeURIComponent(id)}`, { method: 'POST' });
+      const j = await r.json();
+      if (j.error) alert(`Erreur: ${j.error}`); else {
+        document.getElementById('djust-id').textContent = j.id;
+        document.getElementById('djust-existing-id').value = '';
+        alert('Compte Djust lié avec succès');
+      }
+    } catch (e) {
+      alert(`Erreur lors de la liaison du compte Djust: ${e.message}`);
+    }
+  };
+
+  document.getElementById('btn-request-transfers').onclick = async () => {
+    try {
+      const r = await fetch('/accounts/djust/request-transfers', { method: 'POST' });
+      const j = await r.json();
+      if (j.error) { alert(`Erreur: ${j.error}`); return; }
+      if (j.onboarding_url) {
+        if (confirm('Ouvrir l\'onboarding pour activer les transfers ?')) {
+          window.location = j.onboarding_url;
+        }
+      } else {
+        alert(`Status transfers: ${j.transfers_status || 'unknown'}`);
+      }
+    } catch (e) {
+      alert(`Erreur lors de la demande de capability transfers: ${e.message}`);
+    }
+  };
+
+  document.getElementById('transfer-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const p = Object.fromEntries(new FormData(form).entries());
+    // POST JSON to /transfers/djust
+    try {
+      const res = await fetch('/transfers/djust', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        amount: parseInt(p.amount, 10),
+        currency: p.currency,
+        description: p.description || null
+      })});
+      const j = await res.json();
+      const tl = document.getElementById('transfer-log');
+      if (j.error) {
+        tl.textContent = `Erreur: ${j.error}`;
+      } else {
+        tl.textContent = `Transfert OK: ${j.id} (${j.amount} ${j.currency})`;
+      }
+    } catch (err) {
+      document.getElementById('transfer-log').textContent = `Erreur: ${err.message}`;
+    }
+  };
+
+  // Manual refresh button for balance
+  document.getElementById('btn-refresh-balance').onclick = async () => {
+    try {
+      const res = await fetch('/api/state');
+      const data = await res.json();
+      const balBox = document.getElementById('balance-box');
+      if (data.platform_balance) {
+        const parts = Object.entries(data.platform_balance).map(([cur, amt]) => `${cur.toUpperCase()}: ${amt}`).join(' · ');
+        balBox.textContent = `Solde plateforme (disponible): ${parts}`;
+      } else {
+        balBox.textContent = 'Solde plateforme: indisponible';
+      }
+      const balPending = document.getElementById('balance-box-pending');
+      if (data.platform_balance_pending) {
+        const partsPending = Object.entries(data.platform_balance_pending).map(([cur, amt]) => `${cur.toUpperCase()}: ${amt}`).join(' · ');
+        balPending.textContent = `Solde en attente: ${partsPending}`;
+      } else {
+        balPending.textContent = 'Solde en attente: indisponible';
+      }
+    } catch (e) {
+      document.getElementById('balance-box').textContent = `Solde plateforme: erreur (${e.message})`;
+      document.getElementById('balance-box-pending').textContent = 'Solde en attente: erreur';
+    }
+  };
+
+  refreshState();
+</script>
+</body>
+</html>

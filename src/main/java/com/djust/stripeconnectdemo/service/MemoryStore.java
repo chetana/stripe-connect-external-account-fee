@@ -12,6 +12,9 @@ import java.util.Map;
 @Component
 public class MemoryStore {
     private final Map<String, Boolean> accounts = new LinkedHashMap<>();
+    private String djustAccountId;
 
     public Map<String, Boolean> getAccounts() { return accounts; }
+    public String getDjustAccountId() { return djustAccountId; }
+    public void setDjustAccountId(String id) { this.djustAccountId = id; }
 }
